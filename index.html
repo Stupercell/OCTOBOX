@@ -1,66 +1,101 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>octobox</title>
-  <style>
-    body {
-      margin: 0;
-      background-color: #00a3ff;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
+import os
+import tweepy
+from PIL import Image, ImageDraw, ImageFont
 
-    h1 {
-      margin-top: 20px;
-    }
+# === Twitter API v2 client (for tweeting) ===
+client = tweepy.Client(
+    bearer_token=os.getenv("BEARER_TOKEN"),
+    consumer_key=os.getenv("API_KEY"),
+    consumer_secret=os.getenv("API_SECRET"),
+    access_token=os.getenv("ACCESS_TOKEN"),
+    access_token_secret=os.getenv("ACCESS_SECRET")
+)
 
-    .octobox {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-gap: 10px;
-      padding: 20px;
-      width: 100%;
-      max-width: 1600px;
-      box-sizing: border-box;
-    }
+# === Twitter API v1.1 auth (for media upload) ===
+auth = tweepy.OAuth1UserHandler(
+    os.getenv("API_KEY"),
+    os.getenv("API_SECRET"),
+    os.getenv("ACCESS_TOKEN"),
+    os.getenv("ACCESS_SECRET")
+)
+api_v1 = tweepy.API(auth)
 
-    .video-box {
-      background-color: #1e1e1e;
-      border: 2px solid #444;
-      aspect-ratio: 16 / 9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #aaa;
-    }
+# === Image Generator ===
+def create_tornado_emergency_graphic():
+    width, height = 1280, 720
+    image = Image.new("RGB", (width, height), (20, 20, 20))
+    draw = ImageDraw.Draw(image)
 
-    @media (max-width: 768px) {
-      .octobox {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-  </style>
-</head>
-<body>
-  <h1>Octobox</h1>
-  <div class="octobox">
-    <div class="video-box">https://new.511.nebraska.gov/map/event/NECARS5-41724/@-98.65767,40.9707,9?show=normalCameras#camera/247/1907269632</div>
-    <div class="video-box">PH2</div>
-    <div class="video-box">PH3</div>
-    <div class="video-box">PH4</div>
-    <div class="video-box">PH5</div>
-    <div class="video-box">PH6</div>
-    <div class="video-box">PH7</div>
-    <div class="video-box">PH8</div>
-  </div>
-</body>
-</html>
+    # === Fonts ===
+    try:
+        font_header = ImageFont.truetype("arialbd.ttf", 50)
+        font_sub = ImageFont.truetype("arialbd.ttf", 28)
+        font_main = ImageFont.truetype("arial.ttf", 26)
+    except:
+        font_header = font_sub = font_main = ImageFont.load_default()
+
+    # === Header Banner ===
+    draw.rectangle([0, 0, width, 80], fill="#f39c12")  # orange header
+    draw.text((30, 20), "🌪️ TORNADO EMERGENCY TEST", fill="white", font=font_header)
+
+    # === Radar Placeholder (Left) ===
+    draw.rectangle([0, 80, 860, height], fill=(50, 50, 50))
+    draw.text((30, 100), "Radar Placeholder", fill="white", font=font_sub)
+
+    # === Right Panel Background ===
+    panel_x = 860
+    draw.rectangle([panel_x, 80, width, height], fill=(0, 0, 0))
+
+    # === Sections ===
+    y = 100
+    spacing = 70
+    margin = 20
+
+    def draw_section(title, value, color="white", bg="#222"):
+        nonlocal y
+        box_y1 = y
+        box_y2 = y + spacing
+        draw.rectangle([panel_x + margin, box_y1, width - margin, box_y2], fill=bg)
+        draw.text((panel_x + margin + 10, box_y1 + 10), title, fill="#f1c40f", font=font_sub)
+        draw.text((panel_x + margin + 10, box_y1 + 35), value, fill=color, font=font_main)
+        y += spacing + 10
+
+    # === Info Panels ===
+    draw_section("📅 VALID UNTIL", "Sun, Jul 2, 2025 6:45 PM ET")
+    draw_section("📍 AFFECTED COUNTIES", "FRANKLIN, OH, DELAWARE, OH, LICKING, OH")
+
+    draw.text((panel_x + margin, y + 10), "Threat Information", fill="white", font=font_sub)
+    y += spacing
+
+    draw_section("⚡ DAMAGE THREAT", "CATASTROPHIC", color="white", bg="#8B0000")
+    draw_section("🌪️ TORNADO", "CONFIRMED LARGE AND EXTREMELY DANGEROUS", color="white", bg="#8B0000")
+    draw_section("➡️ STORM MOTION", "TEST")
+    draw_section("💨 MAX WIND GUST", "TEST")
+    draw_section("🧊 MAX HAIL SIZE", "TEST")
+
+    # === Placeholder logos at bottom right ===
+    draw.rectangle([panel_x + 20, height - 100, panel_x + 100, height - 20], fill=(90, 90, 90))
+    draw.rectangle([width - 100, height - 100, width - 20, height - 20], fill=(90, 90, 90))
+    draw.text((panel_x + 25, height - 90), "Logo 1", fill="white", font=font_main)
+    draw.text((width - 90, height - 90), "Logo 2", fill="white", font=font_main)
+
+    path = "tornado_emergency_post.png"
+    image.save(path)
+    return path
+
+# === Tweet Text ===
+tweet_text = (
+    "🚨 TORNADO EMERGENCY TEST FOR FRANKLIN, DELAWARE, AND LICKING COUNTY UNTIL 6:45 PM ET.\n"
+    "THIS IS A TEST AND EXTREMELY DANGEROUS TEST.\n"
+    "IF YOU DON'T SEEK SHELTER, YOU MAY DIE!!\n"
+    "#OHwx #wx #wxtwitter"
+)
+
+# === Generate and Post ===
+try:
+    image_path = create_tornado_emergency_graphic()
+    media = api_v1.media_upload(image_path)
+    client.create_tweet(text=tweet_text, media_ids=[media.media_id])
+    print("✅ Tornado Emergency test tweet posted.")
+except Exception as e:
+    print("❌ Failed to post tweet:", e)
